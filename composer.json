@@ -8,10 +8,23 @@
             "email": "martin9636@gmail.com"
         }
     ],
-    "require": {},
+    "require-dev": {
+        "laravel/framework": "5.5.*"
+    },
+    "replace": {
+
+    },
     "autoload": {
         "psr-4": {
-            "Martin25699\\Crud\\": "/"
+            "Martin25699\\Crud\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "files": [
+            "src/Illuminate/Foundation/helpers.php"
+        ],
+        "psr-4": {
+            "Martin25699\\Crud\\": "src"
         }
     }
 

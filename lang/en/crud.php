@@ -7,6 +7,8 @@
  */
 return [
     'default' => 'Whoops, looks like something went wrong.',
-    'create_item' => 'Element creation failed',
+    'error' => 'Whoops, looks like something went wrong.',
+    'create_item_error' => 'Element creation failed',
+    'create_item' => 'Element creation completed',
     'missing_model' => 'Model :model not found'
 ];
