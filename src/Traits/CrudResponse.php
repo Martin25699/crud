@@ -7,11 +7,24 @@
  */
 namespace Martin25699\Crud\Traits;
 
+use Symfony\Component\HttpFoundation\Response;
+
 trait CrudResponse
 {
-    protected $status = 200;
+    protected $status = Response::HTTP_OK;
     protected $data = null;
+    protected $errors = null;
     protected $message = null;
+
+    /**
+     * @param null $errors
+     * @return $this
+     */
+    public function setErrors($errors)
+    {
+        $this->errors = $errors;
+        return $this;
+    }
 
     /**
      * @param int $code
@@ -52,6 +65,8 @@ trait CrudResponse
 
         if ($this->data) $data['data'] = $this->data;
 
+        if ($this->errors) $data['errors'] = $this->errors;
+
         return response()->json($data, $this->status);
     }
 
@@ -61,15 +76,15 @@ trait CrudResponse
      * @param int $status
      * @return \Illuminate\Http\JsonResponse
      */
-    private function responseError($message = null, $data = null, $status = 500){
+    private function responseError($message = null, $data = null, $status = Response::HTTP_INTERNAL_SERVER_ERROR){
 
-        if ($message === null) $message = trans('crud::crud.error');
+        if ($message === null) $message = trans('crud::crud.errors.default');
 
         $this->setStatus($status);
 
         $this->setMessage($message);
 
-        $this->setData($data);
+        $this->setErrors($data);
 
         return $this->response()->send();
     }
