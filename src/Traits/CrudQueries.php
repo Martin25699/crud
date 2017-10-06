@@ -16,9 +16,11 @@ trait CrudQueries
     private function getFieldsQuery($requestFields, &$model)
     {
         $queryParams = [];
-        foreach ($requestFields as $field)
-        {
-            $this->refactoringFields($field,$queryParams,$model);
+        if($requestFields){
+            foreach ($requestFields as $field)
+            {
+                $this->refactoringFields($field,$queryParams,$model);
+            }
         }
         $this->checkQueryParams($queryParams,$model);
         $this->buildQuery($queryParams,$model);
