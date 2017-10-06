@@ -10,13 +10,14 @@ namespace Martin25699\Crud\Controllers;
 
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
+use Martin25699\Crud\Traits\CrudQueries;
 use Martin25699\Crud\Traits\CrudResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class CrudController extends Controller
 {
-    use CrudResponse;
+    use CrudResponse,CrudQueries;
 
     const _MODEL = 'model';
     const _ID = 'id';
@@ -44,10 +45,12 @@ class CrudController extends Controller
 
     /**
      * Возвращает список элементов модели
+     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index()
+    public function index(Request $request)
     {
+        $this->getFieldsQuery($request->get('fields'),$this->crudModel);
         return $this->setData($this->crudModel->get())
             ->response();
     }
