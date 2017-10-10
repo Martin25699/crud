@@ -50,7 +50,7 @@ class CrudController extends Controller
      */
     public function index(Request $request)
     {
-        $this->getFieldsQuery($request->get('fields'),$this->crudModel);
+        $this->getFieldsQuery($request->all(),$this->crudModel);
         return $this->setData($this->crudModel->get())
             ->response();
     }

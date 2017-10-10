@@ -10,19 +10,22 @@ namespace Martin25699\Crud\Traits;
 trait CrudQueries
 {
     /**
-     * @param $requestFields
+     * @param $request
      * @param $model
      */
-    private function getFieldsQuery($requestFields, &$model)
+    private function getFieldsQuery($request, &$model)
     {
         $queryParams = [];
-        if($requestFields){
-            foreach ($requestFields as $field)
+        if(isset($request['fields'])){
+            foreach ($request['fields'] as $field)
             {
                 $this->refactoringFields($field,$queryParams,$model);
             }
         }
         $this->checkQueryParams($queryParams,$model);
+        if(isset($request['filters'])) {
+            $this->refactoringFilters($request['filters'], $queryParams);
+        }
         $this->buildQuery($queryParams,$model);
     }
 
@@ -63,6 +66,53 @@ trait CrudQueries
             $params['fields'][] = $column;
         }
     }
+
+    /**
+     * @param $filters = ["{"foo":"2"}","{"bar.id":">=$2"}"]
+     * @param $queryParams
+     */
+    private function refactoringFilters($filters, &$queryParams)
+    {
+        foreach ($filters as $filterStr) {
+            $filter = (array)json_decode($filterStr);
+            $pathFilter = key($filter);
+            if((count($valWithOp = explode('$',current($filter),2))) === 2)
+            {
+                $operator = strlen($valWithOp[0])!==0 ? $valWithOp[0] : '=';
+                $val = $valWithOp[1];
+            } else {
+                $operator = '=';
+                $val = current($filter);
+            }
+            $_c = explode('.',$pathFilter);
+            $this->setQueryFilter($_c,$val,$operator,$queryParams);
+        }
+    }
+
+    /**
+     * @param $_c = Путь до фильтруемого поля [foo,bar,column]
+     * @param $val
+     * @param $operator
+     * @param $queryParams
+     */
+    private function setQueryFilter($_c, $val, $operator, &$queryParams)
+    {
+        $total = count($_c);
+        $item = array_shift($_c);
+        if($total !== 1){
+            if(!isset($queryParams['pivots'][$item])) {
+                if(isset($queryParams['pivots']) && ($_k = array_search($item,$queryParams['pivots'])) !== false)
+                {
+                    unset($queryParams['pivots'][$_k]);
+                }
+                $queryParams['pivots'][$item] = [];
+            }
+            $this->setQueryFilter($_c,$val,$operator,$queryParams['pivots'][$item]);
+        } else {
+            $queryParams['filters'][] = [$item,$operator,$val];
+        }
+    }
+
 
     /**
      * @param $params
@@ -130,9 +180,15 @@ trait CrudQueries
     /**
      * @param $params  = [
             "fields" => [ "foo", "bar" ]
+            "filters" => [
+                [ column, operator, value], ...
+            ],
             "pivots" => [
                 "table",
                 "table" => [
+                    "filters" => [
+                        [ column, operator, value], ...
+                    ],
                     "fields" => [ "foo","bar"],
                         "pivots" => [
                             "table",
@@ -150,6 +206,9 @@ trait CrudQueries
             {
                 case 'fields':
                     $query = $query->select($param);
+                    break;
+                case 'filters':
+                    $query = $query->where($param);
                     break;
                 case 'pivots':
                     $with = [];
