@@ -68,21 +68,21 @@ trait CrudQueries
     }
 
     /**
-     * @param $filters = ["{"foo":"2"}","{"bar.id":">=$2"}"]
+     * @param $filters = ['foo:2','bar:2']
      * @param $queryParams
      */
     private function refactoringFilters($filters, &$queryParams)
     {
         foreach ($filters as $filterStr) {
-            $filter = (array)json_decode($filterStr);
-            $pathFilter = key($filter);
-            if((count($valWithOp = explode('$',current($filter),2))) === 2)
+            $filter = explode(':',$filterStr);
+            $pathFilter = $filter[0];
+            if((count($valWithOp = explode('$',$filter[1],2))) === 2)
             {
                 $operator = strlen($valWithOp[0])!==0 ? $valWithOp[0] : '=';
                 $val = $valWithOp[1];
             } else {
                 $operator = '=';
-                $val = current($filter);
+                $val = $filter[1];
             }
             $_c = explode('.',$pathFilter);
             $this->setQueryFilter($_c,$val,$operator,$queryParams);
