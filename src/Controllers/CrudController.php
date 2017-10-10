@@ -70,10 +70,12 @@ class CrudController extends Controller
     /**
      * Получить элемент из БД
      *
+     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function show()
+    public function show(Request $request)
     {
+        $this->getFieldsQuery($request->all(),$this->crudModel);
         $item = $this->crudModel->find($this->id);
         return $this->setMessage(trans('crud::crud.messages.show_item'))->setData($item)->response();
     }
