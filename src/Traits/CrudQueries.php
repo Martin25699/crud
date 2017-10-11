@@ -26,7 +26,56 @@ trait CrudQueries
         if(isset($request['filters'])) {
             $this->refactoringFilters($request['filters'], $queryParams);
         }
+        if(isset($request['has'])) {
+            $this->refactoringHas($request['has'], $queryParams);
+        }
         $this->buildQuery($queryParams,$model);
+    }
+
+    /**
+     * @param $filters = ['foo:2','bar:2']
+     * @param $queryParams
+     */
+    private function refactoringHas($filters, &$queryParams)
+    {
+        foreach ($filters as $filterStr) {
+            $filter = explode(':',$filterStr);
+            $pathFilter = $filter[0];
+            if((count($valWithOp = explode('$',$filter[1],2))) === 2)
+            {
+                $operator = strlen($valWithOp[0])!==0 ? $valWithOp[0] : '=';
+                $val = $valWithOp[1];
+            } else {
+                $operator = '=';
+                $val = $filter[1];
+            }
+            $_c = explode('.',$pathFilter);
+            $this->setQueryHas($_c,$val,$operator,$queryParams);
+        }
+    }
+
+    /**
+     * @param $_c = Путь до фильтруемого поля [foo,bar,column]
+     * @param $val
+     * @param $operator
+     * @param $queryParams
+     */
+    private function setQueryHas($_c, $val, $operator, &$queryParams)
+    {
+        $total = count($_c);
+        if($total !== 2){
+            $item = array_shift($_c);
+            if(!isset($queryParams['pivots'][$item])) {
+                if(isset($queryParams['pivots']) && ($_k = array_search($item,$queryParams['pivots'])) !== false)
+                {
+                    unset($queryParams['pivots'][$_k]);
+                }
+                $queryParams['pivots'][$item] = [];
+            }
+            $this->setQueryHas($_c,$val,$operator,$queryParams['pivots'][$item]);
+        } else {
+            $queryParams['has'][$_c[0]] = [$_c[1],$operator,$val];
+        }
     }
 
     /**
@@ -209,6 +258,14 @@ trait CrudQueries
                     break;
                 case 'filters':
                     $query = $query->where($param);
+                    break;
+                case 'has':
+                    foreach ($param as $i => $has)
+                    {
+                        $query->whereHas($i,function ($query) use ($has){
+                            $query->where($has[0],$has[1],$has[2]);
+                        });
+                    }
                     break;
                 case 'pivots':
                     $with = [];
