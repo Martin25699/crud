@@ -19,11 +19,7 @@ class CrudServiceProvider extends ServiceProvider {
 
         $this->loadTranslationsFrom(__DIR__ . '/../lang','crud');
 
-        // Routing
-        if (! $this->app->routesAreCached()) {
-            include __DIR__ . '/../routes/web.php';
-        }
-
+        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
     }
 
     public function register()
