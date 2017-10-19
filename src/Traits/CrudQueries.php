@@ -272,7 +272,9 @@ trait CrudQueries
                     foreach ($param as $i => $pivot)
                     {
                         if (is_string($pivot))
-                            $with[] = $pivot;
+                            $with[$pivot] = function ($_query) {
+                                $_query->accessCrud();
+                            };
                         else
                             $with[$i] = function ($_query) use ($pivot){
                                 $this->buildQuery($pivot,$_query);
@@ -282,5 +284,6 @@ trait CrudQueries
                     break;
             }
         }
+        $query = $query->accessCrud();
     }
 }
