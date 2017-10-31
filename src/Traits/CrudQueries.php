@@ -263,7 +263,8 @@ trait CrudQueries
                     foreach ($param as $i => $has)
                     {
                         $query->whereHas($i,function ($query) use ($has){
-                            $query->where($has[0],$has[1],$has[2]);
+                            $table = $query->getModel()->getTable();
+                            $query->where($table.'.'.$has[0],$has[1],$has[2]);
                         });
                     }
                     break;
