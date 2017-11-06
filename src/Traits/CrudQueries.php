@@ -33,53 +33,8 @@ trait CrudQueries
     }
 
     /**
-     * @param $filters = ['foo:2','bar:2']
-     * @param $queryParams
-     */
-    private function refactoringHas($filters, &$queryParams)
-    {
-        foreach ($filters as $filterStr) {
-            $filter = explode(':',$filterStr);
-            $pathFilter = $filter[0];
-            if((count($valWithOp = explode('$',$filter[1],2))) === 2)
-            {
-                $operator = strlen($valWithOp[0])!==0 ? $valWithOp[0] : '=';
-                $val = $valWithOp[1];
-            } else {
-                $operator = '=';
-                $val = $filter[1];
-            }
-            $_c = explode('.',$pathFilter);
-            $this->setQueryHas($_c,$val,$operator,$queryParams);
-        }
-    }
-
-    /**
-     * @param $_c = Путь до фильтруемого поля [foo,bar,column]
-     * @param $val
-     * @param $operator
-     * @param $queryParams
-     */
-    private function setQueryHas($_c, $val, $operator, &$queryParams)
-    {
-        $total = count($_c);
-        if($total !== 2){
-            $item = array_shift($_c);
-            if(!isset($queryParams['pivots'][$item])) {
-                if(isset($queryParams['pivots']) && ($_k = array_search($item,$queryParams['pivots'])) !== false)
-                {
-                    unset($queryParams['pivots'][$_k]);
-                }
-                $queryParams['pivots'][$item] = [];
-            }
-            $this->setQueryHas($_c,$val,$operator,$queryParams['pivots'][$item]);
-        } else {
-            $queryParams['has'][$_c[0]] = [$_c[1],$operator,$val];
-        }
-    }
-
-    /**
-     * @param $field
+     * Формируем данные для выборки полей (SELECT `field`)
+     * @param $field = [field, relation.field, relation.relation.field ]
      * @param $params
      * @param $model
      */
@@ -117,54 +72,9 @@ trait CrudQueries
     }
 
     /**
-     * @param $filters = ['foo:2','bar:2']
-     * @param $queryParams
-     */
-    private function refactoringFilters($filters, &$queryParams)
-    {
-        foreach ($filters as $filterStr) {
-            $filter = explode(':',$filterStr);
-            $pathFilter = $filter[0];
-            if((count($valWithOp = explode('$',$filter[1],2))) === 2)
-            {
-                $operator = strlen($valWithOp[0])!==0 ? $valWithOp[0] : '=';
-                $val = $valWithOp[1];
-            } else {
-                $operator = '=';
-                $val = $filter[1];
-            }
-            $_c = explode('.',$pathFilter);
-            $this->setQueryFilter($_c,$val,$operator,$queryParams);
-        }
-    }
-
-    /**
-     * @param $_c = Путь до фильтруемого поля [foo,bar,column]
-     * @param $val
-     * @param $operator
-     * @param $queryParams
-     */
-    private function setQueryFilter($_c, $val, $operator, &$queryParams)
-    {
-        $total = count($_c);
-        $item = array_shift($_c);
-        if($total !== 1){
-            if(!isset($queryParams['pivots'][$item])) {
-                if(isset($queryParams['pivots']) && ($_k = array_search($item,$queryParams['pivots'])) !== false)
-                {
-                    unset($queryParams['pivots'][$_k]);
-                }
-                $queryParams['pivots'][$item] = [];
-            }
-            $this->setQueryFilter($_c,$val,$operator,$queryParams['pivots'][$item]);
-        } else {
-            $queryParams['filters'][] = [$item,$operator,$val];
-        }
-    }
-
-
-    /**
-     * @param $params
+     * Тут мы просто проверяем поля, и если есть зависимые таблицы в выборке,
+     * то проверяем есть ли там ключ который нужен для вывода данных этой таблицы
+     * @param $params = [fields => [ field,... ], pivots=> [ relation => [ fields => [field,field...] ]]]
      * @param $model - Текущая модель
      */
     private function checkQueryParams(&$params,$model)
@@ -227,14 +137,127 @@ trait CrudQueries
     }
 
     /**
+     * Тут мы обрабатываем поля фильтрации (WHERE foo=2 and bar=2), устанавливаем споб выборки по умолчанию '='
+     * Допустим 'relation.field:val' -> поле relation.field, значение val, способ '='
+     * Или допустим 'relation.field:>$val' -> поле relation.field, значение val, способ '>'
+     * @param $filters = ['field:val','relation.field:val']
+     * @param $queryParams
+     */
+    private function refactoringFilters($filters, &$queryParams)
+    {
+        foreach ($filters as $filterStr) {
+            $filter = explode(':',$filterStr);
+            $pathFilter = $filter[0];
+            if((count($valWithOp = explode('$',$filter[1],2))) === 2)
+            {
+                $operator = strlen($valWithOp[0])!==0 ? $valWithOp[0] : '=';
+                $val = $valWithOp[1];
+            } else {
+                $operator = '=';
+                $val = $filter[1];
+            }
+            $pathFieldArr = explode('.',$pathFilter);
+            /**
+             * Далее уже готовим сами фильтры, отдельная функция потому что надо обрабатывать отношения (relation)
+             * а как сделать их в этой функция до меня не дошло
+             */
+            $this->setQueryFilter($pathFieldArr,$val,$operator,$queryParams);
+        }
+    }
+
+    /**
+     * @param $pathFieldArr = Путь до фильтруемого поля [relation,relation,field] ||  [relation,field] ||  [field]
+     * Если отношение не было указано в fields параметре запроса, оно будет добавлено автоматически
+     * @param $val
+     * @param $operator
+     * @param $queryParams
+     */
+    private function setQueryFilter($pathFieldArr, $val, $operator, &$queryParams)
+    {
+        $total = count($pathFieldArr);
+        $item = array_shift($pathFieldArr);
+        if($total !== 1){
+            if(!isset($queryParams['pivots'][$item])) {
+                if(isset($queryParams['pivots']) && ($_k = array_search($item,$queryParams['pivots'])) !== false)
+                {
+                    unset($queryParams['pivots'][$_k]);
+                }
+                $queryParams['pivots'][$item] = [];
+            }
+            $this->setQueryFilter($pathFieldArr,$val,$operator,$queryParams['pivots'][$item]);
+        } else {
+            $queryParams['filters'][] = [$item,$operator,$val];
+        }
+    }
+
+    /**
+     * Формируем данные для фильтрации (WHERE foo=2 and bar=2)
+     * @param $filters = ['foo:2','bar:2']
+     * @param $queryParams
+     */
+    private function refactoringHas($filters, &$queryParams)
+    {
+        foreach ($filters as $filterStr) {
+            $filter = explode(':',$filterStr);
+            $pathFilter = $filter[0];
+            if((count($valWithOp = explode('$',$filter[1],2))) === 2)
+            {
+                $operator = strlen($valWithOp[0])!==0 ? $valWithOp[0] : '=';
+                $val = $valWithOp[1];
+            } else {
+                $operator = '=';
+                $val = $filter[1];
+            }
+            $pathFieldArr = explode('.',$pathFilter);
+            /**
+             * Далее уже готовим сами фильтры, отдельная функция потому что надо обрабатывать отношения (relation)
+             * а как сделать их в этой функция до меня не дошло
+             */
+            $this->setQueryHas($pathFieldArr,$val,$operator,$queryParams);
+        }
+    }
+
+    /**
+     * @param $pathField = Path has field [relation,relation,field] ||  [relation,field]
+     * Если отношение не было указано в fields параметре запроса, оно будет добавлено автоматически
+     * @param $val
+     * @param $operator
+     * @param $queryParams
+     */
+    private function setQueryHas($pathField, $val, $operator, &$queryParams)
+    {
+        $total = count($pathField);
+        /**
+         * Если массив из двух элементов то глубже уже не надо, записываем данные в конфиг выборки
+         * если иначе, значит поле по которому отбирать находится глубже следующей таблице отношений (relation)
+         */
+        if($total !== 2){
+            $item = array_shift($pathField);
+            if(!isset($queryParams['pivots'][$item])) {
+                if(isset($queryParams['pivots']) && ($_k = array_search($item,$queryParams['pivots'])) !== false)
+                {
+                    unset($queryParams['pivots'][$_k]);
+                }
+                $queryParams['pivots'][$item] = [];
+            }
+            $this->setQueryHas($pathField,$val,$operator,$queryParams['pivots'][$item]);
+        } else {
+            $queryParams['has'][$pathField[0]] = [$pathField[1],$operator,$val];
+        }
+    }
+
+    /**
      * @param $params  = [
             "fields" => [ "foo", "bar" ]
             "filters" => [
                 [ column, operator, value], ...
             ],
+            "has" => [
+                relation => [ column, operator, value  ]
+            ]
             "pivots" => [
-                "table",
-                "table" => [
+                "relation",
+                "relation" => [
                     "filters" => [
                         [ column, operator, value], ...
                     ],

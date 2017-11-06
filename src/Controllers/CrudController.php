@@ -46,6 +46,15 @@ class CrudController extends Controller
     /**
      * Возвращает список элементов модели
      * @param Request $request
+     * Query example
+     * Устанавливаем выборку полей
+     * ? fields[]=field & fields[]=relation & fields[]=relation.field
+     * Фильтруем записи текущей модели
+     * & filters[]=field:val
+     * Фильтруем записи в отношении
+     * & filters[]=relation.field:val
+     * Фильтруем записи текущей модели, отбираем только те что содежат в отношениях требуемое поле
+     * & has[]=relation.field:val
      * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
