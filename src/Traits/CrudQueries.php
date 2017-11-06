@@ -191,7 +191,7 @@ trait CrudQueries
     }
 
     /**
-     * Формируем данные для фильтрации (WHERE foo=2 and bar=2)
+     * Формируем данные для фильтрации (WHERE EXISTS foo=2 and bar=2)
      * @param $filters = ['foo:2','bar:2']
      * @param $queryParams
      */
