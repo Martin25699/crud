@@ -60,7 +60,16 @@ class CrudController extends Controller
     public function index(Request $request)
     {
         $this->getFieldsQuery($request->all(),$this->crudModel);
-        return $this->setData($this->crudModel->get())
+        if($paginate = $request->get('paginate'))
+        {
+            $raw = $this->crudModel->paginate($paginate)->toArray();
+            $data = $raw['data'];
+            unset($raw['data']);
+            $this->addParamResponse('paginate', $raw);
+        } else {
+            $data = $this->crudModel->get();
+        }
+        return $this->setData($data)
             ->response();
     }
 

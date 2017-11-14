@@ -15,6 +15,19 @@ trait CrudResponse
     protected $data = null;
     protected $errors = null;
     protected $message = null;
+    protected $params = [];
+
+    /**
+     * @param $key
+     * @param $data
+     * @return $this
+     * @internal param null $errors
+     */
+    public function addParamResponse($key, $data)
+    {
+        $this->params[$key] = $data;
+        return $this;
+    }
 
     /**
      * @param null $errors
@@ -66,6 +79,14 @@ trait CrudResponse
         if ($this->data) $data['data'] = $this->data;
 
         if ($this->errors) $data['errors'] = $this->errors;
+
+        if(count($this->params) !== 0)
+        {
+            foreach ($this->params as $k => $val)
+            {
+                $data[$k] = $val;
+            }
+        }
 
         return response()->json($data, $this->status);
     }
