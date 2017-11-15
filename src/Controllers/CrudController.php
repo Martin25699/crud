@@ -80,7 +80,7 @@ class CrudController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validateRequest($request, $this->crudModel->validatorStore);
+        $this->validateRequest($request, $this->crudModel->getValidatorStore());
         $item = $this->crudModel->create($request->all());
         return $this->setMessage(trans('crud::crud.messages.create_item'))->setData($item)->response();
     }
@@ -106,7 +106,7 @@ class CrudController extends Controller
      */
     public function update(Request $request)
     {
-        $this->validateRequest($request, $this->crudModel->validatorUpdate);
+        $this->validateRequest($request, $this->crudModel->getValidatorUpdate());
         $item = $this->crudModel->find($this->id);
         $item->update($request->all());
         return $this->setMessage(trans('crud::crud.messages.update_item'))->setData($item)->response();

@@ -17,4 +17,31 @@ trait CrudModel
         }
         return $query;
     }
+
+    public function getValidatorStore()
+    {
+        if(isset($this->validatorStore))
+        {
+            return $this->validatorStore;
+        }
+        return $this->getValidatorDefault();
+    }
+
+    public function getValidatorUpdate()
+    {
+        if(isset($this->validatorUpdate))
+        {
+            return $this->validatorUpdate;
+        }
+        return $this->getValidatorDefault();
+    }
+
+    public function getValidatorDefault()
+    {
+        if(isset($this->validator))
+        {
+            return $this->validator;
+        }
+        return [];
+    }
 }
